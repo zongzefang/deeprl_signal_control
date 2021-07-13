@@ -39,37 +39,37 @@ class ACPolicy:
         return out_values
 
     def prepare_loss(self, v_coef, max_grad_norm, alpha, epsilon):
-        self.A = tf.placeholder(tf.int32, [self.n_step])
-        self.ADV = tf.placeholder(tf.float32, [self.n_step])
-        self.R = tf.placeholder(tf.float32, [self.n_step])
-        self.entropy_coef = tf.placeholder(tf.float32, [])
+        self.A = tf.compat.v1.placeholder(tf.int32, [self.n_step])
+        self.ADV = tf.compat.v1.placeholder(tf.float32, [self.n_step])
+        self.R = tf.compat.v1.placeholder(tf.float32, [self.n_step])
+        self.entropy_coef = tf.compat.v1.placeholder(tf.float32, [])
         A_sparse = tf.one_hot(self.A, self.n_a)
-        log_pi = tf.log(tf.clip_by_value(self.pi, 1e-10, 1.0))
-        entropy = -tf.reduce_sum(self.pi * log_pi, axis=1)
-        entropy_loss = -tf.reduce_mean(entropy) * self.entropy_coef
-        policy_loss = -tf.reduce_mean(tf.reduce_sum(log_pi * A_sparse, axis=1) * self.ADV)
-        value_loss = tf.reduce_mean(tf.square(self.R - self.v)) * 0.5 * v_coef
+        log_pi = tf.math.log(tf.clip_by_value(self.pi, 1e-10, 1.0))
+        entropy = -tf.reduce_sum(input_tensor=self.pi * log_pi, axis=1)
+        entropy_loss = -tf.reduce_mean(input_tensor=entropy) * self.entropy_coef
+        policy_loss = -tf.reduce_mean(input_tensor=tf.reduce_sum(input_tensor=log_pi * A_sparse, axis=1) * self.ADV)
+        value_loss = tf.reduce_mean(input_tensor=tf.square(self.R - self.v)) * 0.5 * v_coef
         self.loss = policy_loss + value_loss + entropy_loss
 
-        wts = tf.trainable_variables(scope=self.name)
-        grads = tf.gradients(self.loss, wts)
+        wts = tf.compat.v1.trainable_variables(scope=self.name)
+        grads = tf.gradients(ys=self.loss, xs=wts)
         if max_grad_norm > 0:
             grads, self.grad_norm = tf.clip_by_global_norm(grads, max_grad_norm)
-        self.lr = tf.placeholder(tf.float32, [])
-        self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.lr, decay=alpha,
+        self.lr = tf.compat.v1.placeholder(tf.float32, [])
+        self.optimizer = tf.compat.v1.train.RMSPropOptimizer(learning_rate=self.lr, decay=alpha,
                                                    epsilon=epsilon)
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
         if self.name.endswith('_0a'):
             summaries = []
             # summaries.append(tf.summary.scalar('loss/%s_entropy_loss' % self.name, entropy_loss))
-            summaries.append(tf.summary.scalar('loss/%s_policy_loss' % self.name, policy_loss))
-            summaries.append(tf.summary.scalar('loss/%s_value_loss' % self.name, value_loss))
-            summaries.append(tf.summary.scalar('loss/%s_total_loss' % self.name, self.loss))
+            summaries.append(tf.compat.v1.summary.scalar('loss/%s_policy_loss' % self.name, policy_loss))
+            summaries.append(tf.compat.v1.summary.scalar('loss/%s_value_loss' % self.name, value_loss))
+            summaries.append(tf.compat.v1.summary.scalar('loss/%s_total_loss' % self.name, self.loss))
             # summaries.append(tf.summary.scalar('train/%s_lr' % self.name, self.lr))
             # summaries.append(tf.summary.scalar('train/%s_entropy_beta' % self.name, self.entropy_coef))
-            summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
-            self.summary = tf.summary.merge(summaries)
+            summaries.append(tf.compat.v1.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
+            self.summary = tf.compat.v1.summary.merge(summaries)
 
 
 class LstmACPolicy(ACPolicy):
@@ -79,19 +79,19 @@ class LstmACPolicy(ACPolicy):
         self.n_fc_wait = n_fc_wait
         self.n_fc_wave = n_fc_wave
         self.n_w = n_w
-        self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_w]) # forward 1-step
-        self.done_fw = tf.placeholder(tf.float32, [1])
-        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_w]) # backward n-step
-        self.done_bw = tf.placeholder(tf.float32, [n_step])
-        self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
-        with tf.variable_scope(self.name):
+        self.ob_fw = tf.compat.v1.placeholder(tf.float32, [1, n_s + n_w]) # forward 1-step
+        self.done_fw = tf.compat.v1.placeholder(tf.float32, [1])
+        self.ob_bw = tf.compat.v1.placeholder(tf.float32, [n_step, n_s + n_w]) # backward n-step
+        self.done_bw = tf.compat.v1.placeholder(tf.float32, [n_step])
+        self.states = tf.compat.v1.placeholder(tf.float32, [2, n_lstm * 2])
+        with tf.compat.v1.variable_scope(self.name):
             # pi and v use separate nets
             self.pi_fw, pi_state = self._build_net('forward', 'pi')
             self.v_fw, v_state = self._build_net('forward', 'v')
             pi_state = tf.expand_dims(pi_state, 0)
             v_state = tf.expand_dims(v_state, 0)
             self.new_states = tf.concat([pi_state, v_state], 0)
-        with tf.variable_scope(self.name, reuse=True):
+        with tf.compat.v1.variable_scope(self.name, reuse=True):
             self.pi, _ = self._build_net('backward', 'pi')
             self.v, _ = self._build_net('backward', 'v')
         self._reset()
@@ -171,19 +171,19 @@ class FPLstmACPolicy(LstmACPolicy):
         self.n_fc_wait = n_fc_wait
         self.n_fc_fp = n_fc_fp
         self.n_w = n_w
-        self.ob_fw = tf.placeholder(tf.float32, [1, n_s + n_w + n_f]) # forward 1-step
-        self.done_fw = tf.placeholder(tf.float32, [1])
-        self.ob_bw = tf.placeholder(tf.float32, [n_step, n_s + n_w + n_f]) # backward n-step
-        self.done_bw = tf.placeholder(tf.float32, [n_step])
-        self.states = tf.placeholder(tf.float32, [2, n_lstm * 2])
-        with tf.variable_scope(self.name):
+        self.ob_fw = tf.compat.v1.placeholder(tf.float32, [1, n_s + n_w + n_f]) # forward 1-step
+        self.done_fw = tf.compat.v1.placeholder(tf.float32, [1])
+        self.ob_bw = tf.compat.v1.placeholder(tf.float32, [n_step, n_s + n_w + n_f]) # backward n-step
+        self.done_bw = tf.compat.v1.placeholder(tf.float32, [n_step])
+        self.states = tf.compat.v1.placeholder(tf.float32, [2, n_lstm * 2])
+        with tf.compat.v1.variable_scope(self.name):
             # pi and v use separate nets
             self.pi_fw, pi_state = self._build_net('forward', 'pi')
             self.v_fw, v_state = self._build_net('forward', 'v')
             pi_state = tf.expand_dims(pi_state, 0)
             v_state = tf.expand_dims(v_state, 0)
             self.new_states = tf.concat([pi_state, v_state], 0)
-        with tf.variable_scope(self.name, reuse=True):
+        with tf.compat.v1.variable_scope(self.name, reuse=True):
             self.pi, _ = self._build_net('backward', 'pi')
             self.v, _ = self._build_net('backward', 'v')
         self._reset()
@@ -218,8 +218,8 @@ class FcACPolicy(ACPolicy):
         self.n_fc_wait = n_fc_wait
         self.n_fc = n_lstm
         self.n_w = n_w
-        self.obs = tf.placeholder(tf.float32, [None, n_s + n_w])
-        with tf.variable_scope(self.name):
+        self.obs = tf.compat.v1.placeholder(tf.float32, [None, n_s + n_w])
+        with tf.compat.v1.variable_scope(self.name):
             # pi and v use separate nets
             self.pi = self._build_net('pi')
             self.v = self._build_net('v')
@@ -264,8 +264,8 @@ class FPFcACPolicy(FcACPolicy):
         self.n_fc_fp = n_fc_fp
         self.n_fc = n_lstm
         self.n_w = n_w
-        self.obs = tf.placeholder(tf.float32, [None, n_s + n_w + n_f])
-        with tf.variable_scope(self.name):
+        self.obs = tf.compat.v1.placeholder(tf.float32, [None, n_s + n_w + n_f])
+        with tf.compat.v1.variable_scope(self.name):
             # pi and v use separate nets
             self.pi = self._build_net('pi')
             self.v = self._build_net('v')
@@ -305,37 +305,37 @@ class QPolicy:
         raise NotImplementedError()
 
     def prepare_loss(self, max_grad_norm, gamma):
-        self.A = tf.placeholder(tf.int32, [self.n_step])
-        self.S1 = tf.placeholder(tf.float32, [self.n_step, self.n_s + self.n_w])
-        self.R = tf.placeholder(tf.float32, [self.n_step])
-        self.DONE = tf.placeholder(tf.bool, [self.n_step])
+        self.A = tf.compat.v1.placeholder(tf.int32, [self.n_step])
+        self.S1 = tf.compat.v1.placeholder(tf.float32, [self.n_step, self.n_s + self.n_w])
+        self.R = tf.compat.v1.placeholder(tf.float32, [self.n_step])
+        self.DONE = tf.compat.v1.placeholder(tf.bool, [self.n_step])
         A_sparse = tf.one_hot(self.A, self.n_a)
 
         # backward
-        with tf.variable_scope(self.name + '_q', reuse=True):
+        with tf.compat.v1.variable_scope(self.name + '_q', reuse=True):
             q0s = self._build_net(self.S)
-            q0 = tf.reduce_sum(q0s * A_sparse, axis=1)
-        with tf.variable_scope(self.name + '_q', reuse=True):
+            q0 = tf.reduce_sum(input_tensor=q0s * A_sparse, axis=1)
+        with tf.compat.v1.variable_scope(self.name + '_q', reuse=True):
             q1s = self._build_net(self.S1)
-            q1 = tf.reduce_max(q1s, axis=1)
-        tq = tf.stop_gradient(tf.where(self.DONE, self.R, self.R + gamma * q1))
-        self.loss = tf.reduce_mean(tf.square(q0 - tq))
+            q1 = tf.reduce_max(input_tensor=q1s, axis=1)
+        tq = tf.stop_gradient(tf.compat.v1.where(self.DONE, self.R, self.R + gamma * q1))
+        self.loss = tf.reduce_mean(input_tensor=tf.square(q0 - tq))
 
-        wts = tf.trainable_variables(scope=self.name)
-        grads = tf.gradients(self.loss, wts)
+        wts = tf.compat.v1.trainable_variables(scope=self.name)
+        grads = tf.gradients(ys=self.loss, xs=wts)
         if max_grad_norm > 0:
             grads, self.grad_norm = tf.clip_by_global_norm(grads, max_grad_norm)
-        self.lr = tf.placeholder(tf.float32, [])
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+        self.lr = tf.compat.v1.placeholder(tf.float32, [])
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.lr)
         self._train = self.optimizer.apply_gradients(list(zip(grads, wts)))
         # monitor training
         if self.name.endswith('_0a'):
             summaries = []
-            summaries.append(tf.summary.scalar('train/%s_loss' % self.name, self.loss))
-            summaries.append(tf.summary.scalar('train/%s_q' % self.name, tf.reduce_mean(q0)))
-            summaries.append(tf.summary.scalar('train/%s_tq' % self.name, tf.reduce_mean(tq)))
-            summaries.append(tf.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
-            self.summary = tf.summary.merge(summaries)
+            summaries.append(tf.compat.v1.summary.scalar('train/%s_loss' % self.name, self.loss))
+            summaries.append(tf.compat.v1.summary.scalar('train/%s_q' % self.name, tf.reduce_mean(input_tensor=q0)))
+            summaries.append(tf.compat.v1.summary.scalar('train/%s_tq' % self.name, tf.reduce_mean(input_tensor=tq)))
+            summaries.append(tf.compat.v1.summary.scalar('train/%s_gradnorm' % self.name, self.grad_norm))
+            self.summary = tf.compat.v1.summary.merge(summaries)
 
 
 class DeepQPolicy(QPolicy):
@@ -344,8 +344,8 @@ class DeepQPolicy(QPolicy):
         self.n_fc = n_fc
         self.n_fc0 = n_fc0
         self.n_w = n_w
-        self.S = tf.placeholder(tf.float32, [None, n_s + n_w])
-        with tf.variable_scope(self.name + '_q'):
+        self.S = tf.compat.v1.placeholder(tf.float32, [None, n_s + n_w])
+        with tf.compat.v1.variable_scope(self.name + '_q'):
             self.qvalues = self._build_net(self.S)
 
     def _build_net(self, S):
@@ -380,9 +380,9 @@ class DeepQPolicy(QPolicy):
 class LRQPolicy(DeepQPolicy):
     def __init__(self, n_s, n_a, n_step, name=None):
         QPolicy.__init__(self, n_a, n_s, n_step, 'lr', name)
-        self.S = tf.placeholder(tf.float32, [None, n_s])
+        self.S = tf.compat.v1.placeholder(tf.float32, [None, n_s])
         self.n_w = 0
-        with tf.variable_scope(self.name + '_q'):
+        with tf.compat.v1.variable_scope(self.name + '_q'):
             self.qvalues = self._build_net(self.S)
 
     def _build_net(self, S):

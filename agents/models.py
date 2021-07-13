@@ -24,18 +24,18 @@ class A2C:
         self.n_a = n_a
         self.n_step = model_config.getint('batch_size')
         # init tf
-        tf.reset_default_graph()
-        tf.set_random_seed(seed)
-        config = tf.ConfigProto(allow_soft_placement=True)
-        self.sess = tf.Session(config=config)
+        tf.compat.v1.reset_default_graph()
+        tf.compat.v1.set_random_seed(seed)
+        config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.compat.v1.Session(config=config)
         self.policy = self._init_policy(n_s, n_a, n_f, model_config)
-        self.saver = tf.train.Saver(max_to_keep=5)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5)
         if total_step:
             # training
             self.total_step = total_step
             self._init_scheduler(model_config)
             self._init_train(model_config)
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def _init_policy(self, n_s, n_a, n_w, n_f, model_config, agent_name=None):
         n_fw = model_config.getint('num_fw')
@@ -142,22 +142,22 @@ class IA2C(A2C):
         self.n_w_ls = n_w_ls
         self.n_step = model_config.getint('batch_size')
         # init tf
-        tf.reset_default_graph()
-        tf.set_random_seed(seed)
-        config = tf.ConfigProto(allow_soft_placement=True)
-        self.sess = tf.Session(config=config)
+        tf.compat.v1.reset_default_graph()
+        tf.compat.v1.set_random_seed(seed)
+        config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.compat.v1.Session(config=config)
         self.policy_ls = []
         for i, (n_s, n_w, n_a) in enumerate(zip(self.n_s_ls, self.n_w_ls, self.n_a_ls)):
             # agent_name is needed to differentiate multi-agents
             self.policy_ls.append(self._init_policy(n_s - n_w, n_a, n_w, 0, model_config,
                                   agent_name='{:d}a'.format(i)))
-        self.saver = tf.train.Saver(max_to_keep=5)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5)
         if total_step:
             # training
             self.total_step = total_step
             self._init_scheduler(model_config)
             self._init_train(model_config)
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def _init_train(self, model_config):
         # init loss
@@ -243,22 +243,22 @@ class MA2C(IA2C):
         self.n_w_ls = n_w_ls
         self.n_step = model_config.getint('batch_size')
         # init tf
-        tf.reset_default_graph()
-        tf.set_random_seed(seed)
-        config = tf.ConfigProto(allow_soft_placement=True)
-        self.sess = tf.Session(config=config)
+        tf.compat.v1.reset_default_graph()
+        tf.compat.v1.set_random_seed(seed)
+        config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.compat.v1.Session(config=config)
         self.policy_ls = []
         for i, (n_s, n_a, n_w, n_f) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_w_ls, self.n_f_ls)):
             # agent_name is needed to differentiate multi-agents
             self.policy_ls.append(self._init_policy(n_s - n_f - n_w, n_a, n_w, n_f, model_config,
                                                     agent_name='{:d}a'.format(i)))
-        self.saver = tf.train.Saver(max_to_keep=5)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5)
         if total_step:
             # training
             self.total_step = total_step
             self._init_scheduler(model_config)
             self._init_train(model_config)
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
 
 class IQL(A2C):
@@ -274,23 +274,23 @@ class IQL(A2C):
         self.n_w_ls = n_w_ls
         self.n_step = model_config.getint('batch_size')
         # init tf
-        tf.reset_default_graph()
-        tf.set_random_seed(seed)
-        config = tf.ConfigProto(allow_soft_placement=True)
-        self.sess = tf.Session(config=config)
+        tf.compat.v1.reset_default_graph()
+        tf.compat.v1.set_random_seed(seed)
+        config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+        self.sess = tf.compat.v1.Session(config=config)
         self.policy_ls = []
         for i, (n_s, n_a, n_w) in enumerate(zip(self.n_s_ls, self.n_a_ls, self.n_w_ls)):
             # agent_name is needed to differentiate multi-agents
             self.policy_ls.append(self._init_policy(n_s, n_a, n_w, model_config,
                                                     agent_name='{:d}a'.format(i)))
-        self.saver = tf.train.Saver(max_to_keep=5)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5)
         if total_step:
             # training
             self.total_step = total_step
             self._init_scheduler(model_config)
             self._init_train(model_config)
         self.cur_step = 0
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def _init_policy(self, n_s, n_a, n_w, model_config, agent_name=None):
         if self.model_type == 'dqn':

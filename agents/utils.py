@@ -46,30 +46,30 @@ layers
 """
 def conv(x, scope, n_out, f_size, stride=1, pad='VALID', f_size_w=None, act=tf.nn.relu,
          conv_dim=1, init_scale=DEFAULT_SCALE, init_mode=None, init_method=DEFAULT_METHOD):
-    with tf.variable_scope(scope):
-        b = tf.get_variable("b", [n_out], initializer=tf.constant_initializer(0.0))
+    with tf.compat.v1.variable_scope(scope):
+        b = tf.compat.v1.get_variable("b", [n_out], initializer=tf.compat.v1.constant_initializer(0.0))
         if conv_dim == 1:
             n_c = x.shape[2].value
-            w = tf.get_variable("w", [f_size, n_c, n_out],
+            w = tf.compat.v1.get_variable("w", [f_size, n_c, n_out],
                                 initializer=init_method(init_scale, init_mode))
-            z = tf.nn.conv1d(x, w, stride=stride, padding=pad) + b
+            z = tf.nn.conv1d(input=x, filters=w, stride=stride, padding=pad) + b
         elif conv_dim == 2:
             n_c = x.shape[3].value
             if f_size_w is None:
                 f_size_w = f_size
-            w = tf.get_variable("w", [f_size, f_size_w, n_c, n_out],
+            w = tf.compat.v1.get_variable("w", [f_size, f_size_w, n_c, n_out],
                                 initializer=init_method(init_scale, init_mode))
-            z = tf.nn.conv2d(x, w, strides=[1, stride, stride, 1], padding=pad) + b
+            z = tf.nn.conv2d(input=x, filters=w, strides=[1, stride, stride, 1], padding=pad) + b
         return act(z)
 
 
 def fc(x, scope, n_out, act=tf.nn.relu, init_scale=DEFAULT_SCALE,
        init_mode=DEFAULT_MODE, init_method=DEFAULT_METHOD):
-    with tf.variable_scope(scope):
+    with tf.compat.v1.variable_scope(scope):
         n_in = x.shape[1].value
-        w = tf.get_variable("w", [n_in, n_out],
+        w = tf.compat.v1.get_variable("w", [n_in, n_out],
                             initializer=init_method(init_scale, init_mode))
-        b = tf.get_variable("b", [n_out], initializer=tf.constant_initializer(0.0))
+        b = tf.compat.v1.get_variable("b", [n_out], initializer=tf.compat.v1.constant_initializer(0.0))
         z = tf.matmul(x, w) + b
         return act(z)
 
@@ -92,12 +92,12 @@ def lstm(xs, dones, s, scope, init_scale=DEFAULT_SCALE, init_mode=DEFAULT_MODE,
     dones = batch_to_seq(dones)
     n_in = xs[0].shape[1].value
     n_out = s.shape[0] // 2
-    with tf.variable_scope(scope):
-        wx = tf.get_variable("wx", [n_in, n_out*4],
+    with tf.compat.v1.variable_scope(scope):
+        wx = tf.compat.v1.get_variable("wx", [n_in, n_out*4],
                              initializer=init_method(init_scale, init_mode))
-        wh = tf.get_variable("wh", [n_out, n_out*4],
+        wh = tf.compat.v1.get_variable("wh", [n_out, n_out*4],
                              initializer=init_method(init_scale, init_mode))
-        b = tf.get_variable("b", [n_out*4], initializer=tf.constant_initializer(0.0))
+        b = tf.compat.v1.get_variable("b", [n_out*4], initializer=tf.compat.v1.constant_initializer(0.0))
     s = tf.expand_dims(s, 0)
     c, h = tf.split(axis=1, num_or_size_splits=2, value=s)
     for ind, (x, done) in enumerate(zip(xs, dones)):
@@ -118,20 +118,20 @@ def lstm(xs, dones, s, scope, init_scale=DEFAULT_SCALE, init_mode=DEFAULT_MODE,
 
 def test_layers():
     print(tf.__version__)
-    tf.reset_default_graph()
-    sess = tf.Session()
+    tf.compat.v1.reset_default_graph()
+    sess = tf.compat.v1.Session()
     n_step = 5
-    fc_x = tf.placeholder(tf.float32, [None, 10])
-    lstm_x = tf.placeholder(tf.float32, [n_step, 2])
-    lstm_done = tf.placeholder(tf.float32, [n_step])
-    lstm_s = tf.placeholder(tf.float32, [20])
-    conv1_x = tf.placeholder(tf.float32, [None, 8, 1])
-    conv2_x = tf.placeholder(tf.float32, [None, 8, 8, 1])
+    fc_x = tf.compat.v1.placeholder(tf.float32, [None, 10])
+    lstm_x = tf.compat.v1.placeholder(tf.float32, [n_step, 2])
+    lstm_done = tf.compat.v1.placeholder(tf.float32, [n_step])
+    lstm_s = tf.compat.v1.placeholder(tf.float32, [20])
+    conv1_x = tf.compat.v1.placeholder(tf.float32, [None, 8, 1])
+    conv2_x = tf.compat.v1.placeholder(tf.float32, [None, 8, 8, 1])
     fc_out = fc(fc_x, 'fc', 10)
     lstm_out, lstm_ns = lstm(lstm_x, lstm_done, lstm_s, 'lstm')
     conv1_out = conv(conv1_x, 'conv1', 10, 4, conv_dim=1)
     conv2_out = conv(conv2_x, 'conv2', 10, 4, conv_dim=2)
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
     inputs = {'fc': {fc_x:np.random.randn(n_step, 10)},
               'lstm_done': {lstm_x:np.zeros((n_step, 2)),
                             lstm_done:np.ones(n_step),
@@ -146,7 +146,7 @@ def test_layers():
                'lstm': [lstm_out, lstm_ns]}
     for scope in ['fc', 'lstm', 'conv1', 'conv2']:
         print(scope)
-        wts = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+        wts = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
         for wt in wts:
             wt_val = wt.eval(sess)
             print(wt_val.shape)

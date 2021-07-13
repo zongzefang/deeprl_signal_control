@@ -19,8 +19,8 @@ from utils import (Counter, Trainer, Tester, Evaluator,
                    plot_evaluation, plot_train)
 
 def parse_args():
-    default_base_dir = '/Users/tchu/Documents/rl_test/signal_control_results/eval_sep2019/large_grid'
-    default_config_dir = './config/config_test_large.ini'
+    default_base_dir = '/mnt/lustre/zongzefang/MA2C_exp/large_grid/ma2c/'
+    default_config_dir = './config/config_ma2c_large.ini'
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-dir', type=str, required=False,
                         default=default_base_dir, help="experiment base dir")
@@ -122,7 +122,7 @@ def train(args):
 
     # disable multi-threading for safe SUMO implementation
     # threads = []
-    summary_writer = tf.summary.FileWriter(dirs['log'])
+    summary_writer = tf.compat.v1.summary.FileWriter(dirs['log'])
     trainer = Trainer(env, model, global_counter, summary_writer, in_test, output_path=dirs['data'])
     trainer.run()
     # if in_test or post_test:
